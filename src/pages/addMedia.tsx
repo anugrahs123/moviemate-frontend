@@ -1,10 +1,13 @@
 import MediaForm from "../components/MediaForm";
+import { Container, Typography } from "@mui/material";
 
 export default function AddMedia() {
   return (
-    <div className="p-4">
-      <h2 className="text-xl mb-4">Add Movie or TV Show</h2>
+    <Container maxWidth="sm" sx={{ mt: 4 }}>
+      <Typography variant="h5" gutterBottom>
+        Add Movie or TV Show
+      </Typography>
       <MediaForm />
-    </div>
+    </Container>
   );
 }
