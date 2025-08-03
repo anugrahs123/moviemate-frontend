@@ -12,6 +12,7 @@ import {
   Stack,
   Snackbar,
   Alert,
+  CircularProgress,
   type SelectChangeEvent,
   FormHelperText,
 } from "@mui/material";
@@ -56,6 +57,7 @@ const schema = Joi.object({
 export default function MediaForm() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState({
     open: false,
     message: "",
@@ -79,27 +81,37 @@ export default function MediaForm() {
     return false;
   };
 
+  const validateField = (name: string, value: string | number) => {
+    const fieldSchema = schema.extract(name);
+    const { error } = fieldSchema.validate(value);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error?.message || "",
+    }));
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: name === "totalEpisodes" ? Number(value) : value,
-    }));
+    const newValue = name === "totalEpisodes" ? Number(value) : value;
+    setForm((prev) => ({ ...prev, [name]: newValue }));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    validateField(name, value);
   };
 
   const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    setLoading(true);
 
     try {
       await axiosServices.post("/media", form);
@@ -116,6 +128,8 @@ export default function MediaForm() {
         message: "Failed to save media.",
         severity: "error",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,6 +142,7 @@ export default function MediaForm() {
             label="Title"
             value={form.title}
             onChange={handleInputChange}
+            onBlur={handleBlur}
             error={!!errors.title}
             helperText={errors.title}
             fullWidth
@@ -152,22 +167,34 @@ export default function MediaForm() {
             label="Director"
             value={form.director}
             onChange={handleInputChange}
+            onBlur={handleBlur}
             error={!!errors.director}
             helperText={errors.director}
           />
-          <TextField
-            name="genre"
-            label="Genre"
-            value={form.genre}
-            onChange={handleInputChange}
-            error={!!errors.genre}
-            helperText={errors.genre}
-          />
+
+          <FormControl fullWidth error={!!errors.genre}>
+            <InputLabel>Genre</InputLabel>
+            <Select
+              name="genre"
+              value={form.genre}
+              label="Type"
+              onChange={handleSelectChange}
+            >
+              <MenuItem value="Action">Action</MenuItem>
+              <MenuItem value="Comedy">Comedy</MenuItem>
+              <MenuItem value="Fantasy">Fantasy</MenuItem>
+              <MenuItem value="Horror">Horror</MenuItem>
+              <MenuItem value="Romance">Romance</MenuItem>
+              <MenuItem value="Thriller">Thriller</MenuItem>
+            </Select>
+            {!!errors.genre && <FormHelperText>{errors.genre}</FormHelperText>}
+          </FormControl>
           <TextField
             name="platform"
             label="Platform"
             value={form.platform}
             onChange={handleInputChange}
+            onBlur={handleBlur}
             error={!!errors.platform}
             helperText={errors.platform}
           />
@@ -196,14 +223,32 @@ export default function MediaForm() {
               label="Total Episodes"
               value={form.totalEpisodes ?? ""}
               onChange={handleInputChange}
+              onBlur={handleBlur}
               error={!!errors.totalEpisodes}
               helperText={errors.totalEpisodes}
             />
           )}
 
-          <Button variant="contained" type="submit">
-            Save
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              type="submit"
+              disabled={loading}
+              startIcon={
+                loading ? <CircularProgress size={20} color="inherit" /> : null
+              }
+            >
+              {loading ? "Saving..." : "Save"}
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={() => navigate("/")}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+          </Stack>
         </Stack>
       </form>
 
