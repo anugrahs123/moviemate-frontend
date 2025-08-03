@@ -66,16 +66,17 @@ const Recommendations = () => {
             Once you watch and review more media, recommendations will appear
             here.
           </Typography>
-          <Button
-            variant="outlined"
-            fullWidth
-            size="large"
-            startIcon={<HomeIcon />}
-            sx={{ mt: 4 }}
-            onClick={() => navigate("/")}
-          >
-            Home Page
-          </Button>
+          <Box display="flex" justifyContent="center" mt={5}>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<HomeIcon />}
+              onClick={() => navigate("/")}
+              sx={{ width: 300 }}
+            >
+              Home Page
+            </Button>
+          </Box>
         </Box>
       ) : (
         <>
