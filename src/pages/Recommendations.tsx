@@ -6,7 +6,10 @@ import {
   CardContent,
   Typography,
   CircularProgress,
+  Button,
 } from "@mui/material";
+import { Home as HomeIcon } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 interface Media {
   id: number;
@@ -16,6 +19,7 @@ interface Media {
 }
 
 const Recommendations = () => {
+  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,40 +66,64 @@ const Recommendations = () => {
             Once you watch and review more media, recommendations will appear
             here.
           </Typography>
+          <Button
+            variant="outlined"
+            fullWidth
+            size="large"
+            startIcon={<HomeIcon />}
+            sx={{ mt: 4 }}
+            onClick={() => navigate("/")}
+          >
+            Home Page
+          </Button>
         </Box>
       ) : (
-        <Box
-          display="flex"
-          flexWrap="wrap"
-          justifyContent="center"
-          gap={3}
-          mt={3}
-        >
-          {recommendations.map((item) => (
-            <Card
-              key={item.id}
-              sx={{
-                width: 280,
-                borderRadius: 2,
-                boxShadow: 3,
-                transition: "transform 0.2s",
-                "&:hover": { transform: "scale(1.02)" },
-              }}
+        <>
+          <Box
+            display="flex"
+            flexWrap="wrap"
+            justifyContent="center"
+            gap={3}
+            mt={3}
+          >
+            {recommendations.map((item) => (
+              <Card
+                key={item.id}
+                sx={{
+                  width: 280,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  transition: "transform 0.2s",
+                  "&:hover": { transform: "scale(1.02)" },
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Genre: {item.genre}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Platform: {item.platform}
+                  </Typography>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+
+          <Box display="flex" justifyContent="center" mt={5}>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<HomeIcon />}
+              onClick={() => navigate("/")}
+              sx={{ width: 300 }}
             >
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {item.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Genre: {item.genre}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Platform: {item.platform}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
+              Home Page
+            </Button>
+          </Box>
+        </>
       )}
     </Box>
   );
