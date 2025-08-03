@@ -1,8 +1,19 @@
-import { useState } from "react";
-import { Box, Button, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  TextField,
+  InputAdornment,
+  Snackbar,
+  Alert,
+  Stack,
+} from "@mui/material";
+import { LoadingButton } from "@mui/lab";
+import { AutoFixHigh } from "@mui/icons-material";
 import axios from "../utils/axios";
 import Joi from "joi";
 import type { Review } from "../types/review";
+import type { Media } from "../types/media";
 
 interface Props {
   mediaId: number;
@@ -11,7 +22,6 @@ interface Props {
   onClose?: () => void;
 }
 
-// Joi schema
 const schema = Joi.object({
   rating: Joi.number().min(0).max(5).required().messages({
     "number.base": "Please enter rating to proceed.",
@@ -40,6 +50,15 @@ export default function ReviewForm({
     rating?: string;
     reviewText?: string;
   }>({});
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [mediaList, setMediaList] = useState<Media[]>([]);
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  useEffect(() => {
+    axios.get("/media").then((res) => setMediaList(res.data));
+  }, []);
 
   const handleSubmit = () => {
     const { error } = schema.validate(
@@ -72,6 +91,24 @@ export default function ReviewForm({
       });
   };
 
+  const handleAIReview = async () => {
+    setLoadingAI(true);
+    try {
+      const media = mediaList.find((m) => m.id === mediaId);
+      const res = await axios.post("/generate-review", { reviewText, media });
+      setReviewText(res.data.review);
+    } catch (err: unknown) {
+      console.error("AI review failed", err);
+      setSnackbarMessage(
+        // "AI quota exceeded. Please check your OpenAI billing."
+        "Something went wrong while generating the review."
+      );
+      setSnackbarOpen(true);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <TextField
@@ -82,6 +119,18 @@ export default function ReviewForm({
           const val = Number(e.target.value);
           if (val <= 5 && val >= 0) setRating(val);
           else if (e.target.value === "") setRating("");
+        }}
+        onBlur={() => {
+          const { error } = schema.validate(
+            { rating, reviewText },
+            { abortEarly: false }
+          );
+          const newErrors: typeof errors = {};
+          error?.details.forEach((detail) => {
+            const field = detail.path[0] as keyof typeof errors;
+            if (field === "rating") newErrors[field] = detail.message;
+          });
+          setErrors((prev) => ({ ...prev, ...newErrors }));
         }}
         error={!!errors.rating}
         helperText={errors.rating}
@@ -95,17 +144,73 @@ export default function ReviewForm({
         multiline
         rows={3}
         value={reviewText}
-        onChange={(e) => setReviewText(e.target.value)}
+        onChange={(e) => {
+          setReviewText(e.target.value);
+          if (errors.reviewText) {
+            setErrors((prev) => ({ ...prev, reviewText: undefined }));
+          }
+        }}
+        onBlur={() => {
+          const { error } = schema.validate(
+            { rating, reviewText },
+            { abortEarly: false }
+          );
+          const newErrors: typeof errors = {};
+          error?.details.forEach((detail) => {
+            const field = detail.path[0] as keyof typeof errors;
+            if (field === "reviewText") newErrors[field] = detail.message;
+          });
+          setErrors((prev) => ({ ...prev, ...newErrors }));
+        }}
         error={!!errors.reviewText}
         helperText={errors.reviewText}
         inputProps={{ minLength: 10, maxLength: 500 }}
         fullWidth
         required
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <LoadingButton
+                size="small"
+                onClick={handleAIReview}
+                loading={loadingAI}
+                variant="outlined"
+              >
+                <AutoFixHigh />
+              </LoadingButton>
+            </InputAdornment>
+          ),
+        }}
       />
 
-      <Button variant="contained" color="success" onClick={handleSubmit}>
-        Submit Review
-      </Button>
+      <Stack direction="row" spacing={2}>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={handleSubmit}
+          disabled={loadingAI}
+        >
+          Submit Review
+        </Button>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
+      </Stack>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
