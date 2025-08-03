@@ -21,7 +21,7 @@ export default function Dashboard() {
         mb={4}
       >
         <Typography variant="h4" component="h1">
-          My Collection
+          Movie Mate
         </Typography>
         <Button variant="contained" onClick={() => navigate("/add")}>
           + Add Movie / Show

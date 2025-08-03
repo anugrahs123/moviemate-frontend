@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Box, Button, TextField } from "@mui/material";
 import axios from "../utils/axios";
+import Joi from "joi";
 import type { Review } from "../types/review";
 
 interface Props {
@@ -10,16 +11,52 @@ interface Props {
   onClose?: () => void;
 }
 
+// Joi schema
+const schema = Joi.object({
+  rating: Joi.number().min(0).max(5).required().messages({
+    "number.base": "Please enter rating to proceed.",
+    "number.empty": "Please enter rating to proceed.",
+    "number.min": "Rating must be at least 0.",
+    "number.max": "Rating must not exceed 5.",
+    "any.required": "Rating is required.",
+  }),
+  reviewText: Joi.string().min(10).max(500).required().messages({
+    "string.empty": "Please enter review to proceed.",
+    "string.min": "Review must be at least 10 characters.",
+    "string.max": "Review must not exceed 500 characters.",
+    "any.required": "Please enter review to proceed.",
+  }),
+});
+
 export default function ReviewForm({
   mediaId,
   reviews,
   setReviews,
   onClose,
 }: Props) {
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState<number | "">("");
   const [reviewText, setReviewText] = useState("");
+  const [errors, setErrors] = useState<{
+    rating?: string;
+    reviewText?: string;
+  }>({});
 
   const handleSubmit = () => {
+    const { error } = schema.validate(
+      { rating, reviewText },
+      { abortEarly: false }
+    );
+
+    if (error) {
+      const newErrors: typeof errors = {};
+      error.details.forEach((detail) => {
+        const field = detail.path[0] as keyof typeof errors;
+        newErrors[field] = detail.message;
+      });
+      setErrors(newErrors);
+      return;
+    }
+
     axios
       .post("/reviews", {
         media_id: mediaId,
@@ -28,8 +65,9 @@ export default function ReviewForm({
       })
       .then((res) => {
         setReviews([...reviews, res.data]);
-        setRating(0);
+        setRating("");
         setReviewText("");
+        setErrors({});
         onClose?.();
       });
   };
@@ -38,20 +76,33 @@ export default function ReviewForm({
     <Box display="flex" flexDirection="column" gap={2}>
       <TextField
         type="number"
-        label="Rating (0-5)"
+        label="Rating (0–5)"
         value={rating}
-        onChange={(e) => setRating(Number(e.target.value))}
+        onChange={(e) => {
+          const val = Number(e.target.value);
+          if (val <= 5 && val >= 0) setRating(val);
+          else if (e.target.value === "") setRating("");
+        }}
+        error={!!errors.rating}
+        helperText={errors.rating}
         inputProps={{ min: 0, max: 5 }}
         fullWidth
+        required
       />
+
       <TextField
         label="Review"
         multiline
         rows={3}
         value={reviewText}
         onChange={(e) => setReviewText(e.target.value)}
+        error={!!errors.reviewText}
+        helperText={errors.reviewText}
+        inputProps={{ minLength: 10, maxLength: 500 }}
         fullWidth
+        required
       />
+
       <Button variant="contained" color="success" onClick={handleSubmit}>
         Submit Review
       </Button>
